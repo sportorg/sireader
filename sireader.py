@@ -192,12 +192,23 @@ class SIReader(object):
     M_CLEAR = 0x07  # with start-number = standard
     M_CHECK = 0x0A
     M_PRINTOUT = 0x0B  # BS7-P Printer-station (Note: also used by SRR-Receiver-module)
+    M_SRR = 0x0B
     M_START_TRIG = 0x0C  # BS7-S (Sprinter) with external trigger
     M_FINISH_TRIG = 0x0D  # BS7-S (Sprinter) with external trigger
-    M_BC_CONTROL = 0x12  # SI Air+ / SIAC Beacon mode
-    M_BC_START = 0x13  # SI Air+ / SIAC Beacon mode
-    M_BC_FINISH = 0x14  # SI Air+ / SIAC Beacon mode
+    M_BC_TEST = 0x11  # SI Air+ / SIAC Beacon mode
     M_BC_READOUT = 0x15  # SI Air+ / SIAC Beacon mode
+    M_BC_CONTROL = 0x32  # SI Air+ / SIAC Beacon mode
+    M_BC_START = 0x33  # SI Air+ / SIAC Beacon mode
+    M_BC_FINISH = 0x34  # SI Air+ / SIAC Beacon mode
+    M_BC_CONTROL_R_LAST = 0x72  # SI Air+ / SIAC Beacon mode
+    M_BC_START_R_LAST = 0x73  # SI Air+ / SIAC Beacon mode
+    M_BC_FINISH_R_LAST = 0x74  # SI Air+ / SIAC Beacon mode
+    M_BC_CONTROL_R_ALL = 0xB2  # SI Air+ / SIAC Beacon mode
+    M_BC_START_R_ALL = 0xB3  # SI Air+ / SIAC Beacon mode
+    M_BC_FINISH_R_ALL = 0xB4  # SI Air+ / SIAC Beacon mode
+    M_BC_CONTROL_R_UNSENT = 0xF2  # SI Air+ / SIAC Beacon mode
+    M_BC_START_R_UNSENT = 0xF3  # SI Air+ / SIAC Beacon mode
+    M_BC_FINISH_R_UNSENT = 0xF4  # SI Air+ / SIAC Beacon mode
     SUPPORTED_MODES = (M_CONTROL, M_START, M_FINISH, M_READOUT, M_CLEAR, M_CHECK)
 
     # Weekday encoding (only for reference, currently unused)
@@ -571,6 +582,7 @@ class SIReader(object):
 
         try:
             # try at 38400 baud, extended protocol
+            self._serial.write(SIReader.WAKEUP + SIReader.STX)
             self._send_command(SIReader.C_SET_MS, SIReader.P_MS_DIRECT)
         except (SIReaderException, SIReaderTimeout):
             try:
@@ -578,13 +590,17 @@ class SIReader(object):
             except (SerialException, OSError) as msg:
                 raise SIReaderException('Could not set port speed to 4800: %s' % msg)
             try:
+                self._serial.write(SIReader.WAKEUP + SIReader.STX)
                 self._send_command(SIReader.C_SET_MS, SIReader.P_MS_DIRECT)
             except SIReaderException as msg:
                 raise SIReaderException('This module only works with BSM7/8 stations: %s' % msg)
 
         self.port = port
         self.baudrate = self._serial.baudrate
+        if self._logger:
+            self._logger.debug("Device connected with speed = " + str(self.baudrate))
         self._update_proto_config()
+        self.get_type()
 
     def _update_proto_config(self):
         # Read protocol configuration
@@ -596,6 +612,8 @@ class SIReader(object):
         self.proto_config['handshake'] = config_byte & (1 << 2) != 0
         self.proto_config['pw_access'] = config_byte & (1 << 4) != 0
         self.proto_config['punch_read'] = config_byte & (1 << 7) != 0
+
+        self._serial.write(SIReader.WAKEUP + SIReader.STX)
 
         # Read operating mode
         ret = self._send_command(SIReader.C_GET_SYS_VAL, SIReader.O_MODE + b'\x01')
@@ -723,8 +741,8 @@ class SIReader(object):
            (500'000 = 0x07A120 > 0x04FFFF = 465'535 = highest technically possible value on a SI5)
         """
 
-        if number[0:1] != b'\x00':
-            raise SIReaderException('Unknown card series')
+        if number[0:1] != b'\x00' and number[0:1] != b'\x0f' and number[0:1] != b'\x02':
+            raise SIReaderException('Unknown card series: ' + number)
 
         nr = SIReader._to_int(number[1:4])
         if nr < 500000:
@@ -792,7 +810,7 @@ class SIReader(object):
             #  bit 0 - am/pm
             #  bit 7 „1“ subsecond marker
             #  punching time TH-TL - 12h binary [sec]
-            if raw_cn and ptd >> 7:
+            if raw_cn:
                 ms = trunc(byte2int(raw_cn) * 1000.0 / 256)
                 punchtime += timedelta(milliseconds=ms)
 
@@ -928,11 +946,15 @@ class SIReader(object):
             if timeout != None:
                 self._serial.timeout = old_timeout
 
+            if char == SIReader.WAKEUP:
+                # read next byte
+                char = self._serial.read()
+
             if char == b'':
                 raise SIReaderTimeout('No data available')
             elif char == SIReader.NAK:
                 raise SIReaderException('Invalid command or parameter.')
-            elif char != SIReader.STX:
+            elif char != SIReader.STX and char != b'\x43':
                 self._serial.flushInput()
                 raise SIReaderException('Invalid start byte %s' % hex(byte2int(char)))
 
@@ -997,6 +1019,33 @@ class SIReader(object):
             raise SIReaderException('Error reading command: %s' % msg)
 
         return (cmd, data)
+
+    def get_type(self):
+        # conf = self._update_proto_config()
+        conf = self.proto_config
+        print(conf)
+        print('station code = ' + str(self.station_code))
+
+        if conf['mode'] == SIReader.M_READOUT:
+            print('Operating mode - BSM7/8 Readout')
+        elif conf['mode'] == SIReader.M_SRR:
+            print('Operating mode - SRR USB-Dongle')
+        elif conf['mode'] == SIReader.M_CONTROL:
+            print('Operating mode - Control')
+        elif conf['mode'] == SIReader.M_BC_CONTROL:
+            print('Operating mode - Control, beacon')
+        elif conf['mode'] == SIReader.M_BC_CONTROL_R_LAST:
+            print('Operating mode - Control, beacon, send last record')
+        elif conf['mode'] == SIReader.M_BC_CONTROL_R_ALL:
+            print('Operating mode - Control, beacon, send all records')
+        elif conf['mode'] == SIReader.M_BC_CONTROL_R_UNSENT:
+            print('Operating mode - Control, beacon, send unsent records')
+        elif conf['mode'] == SIReader.M_FINISH:
+            print('Operating mode - Finish')
+        elif conf['mode'] == SIReader.M_START:
+            print('Operating mode - Start')
+
+        return conf['mode']
 
 
 class SIReaderReadout(SIReader):
@@ -1206,16 +1255,18 @@ class SIReaderControl(SIReader):
                 break
 
             if c[0] == SIReader.C_TRANS_REC:
-                cur_offset = SIReader._to_int(c[1][SIReader.T_OFFSET:SIReader.T_OFFSET + 3])
-                if self._next_offset is not None:
-                    while self._next_offset < cur_offset:
-                        # recover lost punches
-                        punches.append(self._read_punch(self._next_offset))
-                        self._next_offset += SIReader.REC_LEN
-
-                self._next_offset = cur_offset + SIReader.REC_LEN
-            punches.append((self._decode_cardnr(c[1][SIReader.T_CN:SIReader.T_CN + 4]),
-                            self._decode_time(c[1][SIReader.T_TIME:SIReader.T_TIME + 2])))
+                # cur_offset = SIReader._to_int(c[1][SIReader.T_OFFSET:SIReader.T_OFFSET + 3])
+                # if self._next_offset is not None:
+                #     while self._next_offset < cur_offset:
+                #         # recover lost punches
+                #         punches.append(self._read_punch(self._next_offset))
+                #         self._next_offset += SIReader.REC_LEN
+                #
+                # self._next_offset = cur_offset + SIReader.REC_LEN
+                punches.append((self._decode_cardnr(c[1][SIReader.T_CN:SIReader.T_CN + 4]),
+                            self._decode_time(c[1][SIReader.T_TIME:SIReader.T_TIME + 2],
+                                              raw_ptd=c[1][SIReader.T_TIME - 1],
+                                              raw_cn=c[1][SIReader.T_TIME + 2])))
         else:
             raise SIReaderException('Unexpected command %s received' % hex(byte2int(c[0])))
 
