@@ -891,9 +891,8 @@ class SIReader(object):
         i = card['P1']
 
         """if 192 punches mode for SI6 is activated, station sends 8 blocks"""
-        if len(data) == 128 * 8:
-            i += 128 * 3 # strange behavior of BSM-7 station, reads 8 blocks for SIAC??? Please test with another BSM-7
-
+        if len(data) == 128 * 8 and card_type == 'SI10':
+            i += 128 * 3 # skip 3 blocks with personalisation info
 
         while p < punch_count:
             if card_type == 'SI5' and i % 16 == 0:
@@ -1099,10 +1098,23 @@ class SIReaderReadout(SIReader):
             raw_data = self._send_command(SIReader.C_GET_SI5,
                                           b'')[1]
         elif self.cardtype == 'SI6':
-            raw_data = self._send_command(SIReader.C_GET_SI6,
-                                          SIReader.P_SI6_CB)[1][1:]
-            raw_data += self._read_command()[1][1:]
-            raw_data += self._read_command()[1][1:]
+            block_0 = self._send_command(SIReader.C_GET_SI6, SIReader.P_SI6_CB)[1][1:]
+            block_1 = self._read_command()[1][1:]
+            block_2 = self._read_command()[1]
+            block_flag = block_2[0]
+            block_2 = block_2[1:]
+
+            """if 192 punches mode for SI6 is activated, station sends 8 blocks, emulate correct record"""
+            if block_flag != 7:
+                block_3 = self._read_command()[1][1:]
+                block_4 = self._read_command()[1][1:]
+                block_5 = self._read_command()[1][1:]
+                block_6 = self._read_command()[1][1:]
+                block_7 = self._read_command()[1][1:]
+                raw_data = block_0 + block_6 + block_7 + block_2 + block_3 + block_4 + block_5
+            else:
+                raw_data = block_0 + block_1 + block_2 # 0, 6, 7 blocks of SI6
+
         elif self.cardtype in ('SI8', 'SI9', 'SIpCard', 'SItCard'):
             raw_data = b''
             for b in range(SIReader.CARD[self.cardtype]['BC']):
