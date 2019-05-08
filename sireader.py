@@ -964,21 +964,27 @@ class SIReader(object):
                 self.station_code = SIReader._to_int(station)
 
                 tmp = bytes()
+                all_bytes = bytes()
+
                 etx = self._serial.read()
+
                 while etx != SIReader.ETX:
-                    if etx != SIReader.DLE:
-                        # ignore DLE, otherwise append data
-                        tmp += etx
+                    if etx == SIReader.DLE:
+                        # read one byte after delimiter (x00-x1F should be escaped by DLE in legacy mode)
+                        all_bytes += etx
+                        etx = self._serial.read()
+
+                    all_bytes += etx
+                    tmp += etx
+
                     etx = self._serial.read()
-                    if etx == SIReader.ETX:
-                        break
                 data = tmp
 
                 if self._logger:
                     self._logger.debug("<<== command '%s', station %s, data %s, etx %s" % (
                         hexlify(cmd).decode('ascii'),
                         hexlify(station).decode('ascii'),
-                        ' '.join([hexlify(int2byte(c)).decode('ascii') for c in data]),
+                        ' '.join([hexlify(int2byte(c)).decode('ascii') for c in all_bytes]),
                         hexlify(etx).decode('ascii'),
                     ))
             else:
@@ -1122,24 +1128,23 @@ class SIReaderReadout(SIReader):
                                                int2byte(b))[1][1:]
 
         elif self.cardtype == 'SI10':
-            # Reading out SI10 cards block by block proved to be unreliable and slow
-            # Thus reading with C_GET_SI9 and block number 8 = P_SI6_CB like SI6
-            # cards
-            raw_data = self._send_command(SIReader.C_GET_SI9,
-                                          SIReader.P_SI6_CB)[1][1:]
-            raw_data += self._read_command()[1][1:]
-            raw_data += self._read_command()[1][1:]
-            raw_data += self._read_command()[1][1:]
+            # Reading out SI10 cards block by block, don't read empty punches
 
-            last_data = self._read_command()[1]
-            block_flag = last_data[0]
-            raw_data += last_data[1:]
+            blocks = [b'\x00', b'\x04', b'\x05', b'\x06', b'\x07']
+            block_limit = 1
+            block_index = 0
+            raw_data = b''
+            while block_index < block_limit:
+                cur_block = blocks[block_index]
+                raw_data += self._send_command(SIReader.C_GET_SI9, cur_block)[1][1:]
 
-            """if 192 punches mode for SI6 is activated, station sends 8 blocks"""
-            if block_flag != 7:
-                raw_data += self._read_command()[1][1:]
-                raw_data += self._read_command()[1][1:]
-                raw_data += self._read_command()[1][1:]
+                if block_index == 0:
+                    # read only blocks, containing punches
+                    counter_byte = SIReader.CARD['SI10']['RC']
+                    punch_count = min(byte2int(raw_data[counter_byte]), 128)
+                    block_limit = 1 + (punch_count + 31) // 32
+
+                block_index += 1
         else:
             raise SIReaderException('No card in the device.')
 
