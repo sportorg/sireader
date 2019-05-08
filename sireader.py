@@ -963,15 +963,26 @@ class SIReader(object):
                 station = self._serial.read()
                 self.station_code = SIReader._to_int(station)
 
+                min_length = 0
+                if cmd == self.BC_SI6_DET:
+                    # card number can contain ETX (x03), process exclusively
+                    min_length = 7  # TI TP 0xAA CN3 CN2 CN1 CN0
                 tmp = bytes()
                 etx = self._serial.read()
-                while etx != SIReader.ETX:
-                    if etx != SIReader.DLE:
-                        # ignore DLE, otherwise append data
-                        tmp += etx
+                dle_read = False
+                while etx != SIReader.ETX or len(tmp) < min_length:
+                    if etx == SIReader.DLE:
+                        dle_read = True
+                    else:
+                        if dle_read and etx > '0x1F':
+                            # ignore DLE before 00-1F, otherwise append data
+                            tmp += SIReader.DLE + etx
+                        else:
+                            tmp += etx
+
+                        dle_read = False
+
                     etx = self._serial.read()
-                    if etx == SIReader.ETX:
-                        break
                 data = tmp
 
                 if self._logger:
