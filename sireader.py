@@ -672,7 +672,7 @@ class SIReader(object):
             """generator that split a string into parts of two chars"""
             if len(s) == 0:
                 # immediately stop on empty string
-                raise StopIteration
+                return
 
             # add 0 to the string and make it even length
             if len(s) % 2 == 0:
