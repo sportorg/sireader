@@ -5,18 +5,19 @@ from os import path
 here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the relevant file
-with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
+with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
     name='sportident',
 
-    version='1.2.0',
+    version='1.2.1',
 
     description='Python module to communicate with SportIdent main stations',
     long_description=long_description,
+    long_description_content_type='text/markdown',
 
-    url='http://bosco.durcheinandertal.ch/',
+    url='https://github.com/sportorg/sireader',
 
     # Author details
     author='Akhtarov Danil',
@@ -53,7 +54,7 @@ setup(
     ],
 
     # What does your project relate to?
-    keywords='sportident orienteering bosco',
+    keywords='sportident orienteering sportorg',
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
