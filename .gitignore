@@ -1,4 +1,4 @@
 *.pyc
 dist
 build
-sireader.egg-info
+sportident.egg-info

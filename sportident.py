@@ -672,7 +672,7 @@ class SIReader(object):
             """generator that split a string into parts of two chars"""
             if len(s) == 0:
                 # immediately stop on empty string
-                return
+                raise StopIteration
 
             # add 0 to the string and make it even length
             if len(s) % 2 == 0:
@@ -687,26 +687,27 @@ class SIReader(object):
             return b'\x00\x00'
 
         crc = SIReader._to_int(s[0:2])
+        try:
+            for c in twochars(s[2:]):
+                val = SIReader._to_int(c)
 
-        for c in twochars(s[2:]):
-            val = SIReader._to_int(c)
+                for j in range(16):
+                    if (crc & SIReader.CRC_BITF) != 0:
+                        crc <<= 1
 
-            for j in range(16):
-                if (crc & SIReader.CRC_BITF) != 0:
-                    crc <<= 1
+                        if (val & SIReader.CRC_BITF) != 0:
+                            crc += 1  # rotate carry
 
-                    if (val & SIReader.CRC_BITF) != 0:
-                        crc += 1  # rotate carry
+                        crc ^= SIReader.CRC_POLYNOM
+                    else:
+                        crc <<= 1
 
-                    crc ^= SIReader.CRC_POLYNOM
-                else:
-                    crc <<= 1
+                        if (val & SIReader.CRC_BITF) != 0:
+                            crc += 1  # rotate carry
 
-                    if (val & SIReader.CRC_BITF) != 0:
-                        crc += 1  # rotate carry
-
-                val <<= 1
-
+                    val <<= 1
+        except StopIteration:
+            pass
         # truncate to 16 bit and convert to char
         crc &= 0xFFFF
         ret = int2byte(crc >> 8) + int2byte(crc & 0xFF)

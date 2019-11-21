@@ -9,9 +9,9 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name='sireader',
+    name='sportident',
 
-    version='1.1.1',
+    version='1.2.0',
 
     description='Python module to communicate with SportIdent main stations',
     long_description=long_description,
@@ -19,8 +19,8 @@ setup(
     url='http://bosco.durcheinandertal.ch/',
 
     # Author details
-    author='Gaudenz Steinlin',
-    author_email='gaudenz@durcheinandertal.ch',
+    author='Akhtarov Danil',
+    author_email='daxartio@gmail.com',
 
     # Choose your license
     license='GPLv3+',
@@ -48,6 +48,7 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ],
 
     # What does your project relate to?
@@ -55,7 +56,7 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    py_modules=['sireader'],
+    py_modules=['sportident'],
 
     # List run-time dependencies here.  These will be installed by pip when your
     # project is installed. For an analysis of "install_requires" vs pip's
