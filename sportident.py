@@ -706,7 +706,7 @@ class SIReader(object):
                             crc += 1  # rotate carry
 
                     val <<= 1
-        except StopIteration:
+        except RuntimeError:
             pass
         # truncate to 16 bit and convert to char
         crc &= 0xFFFF

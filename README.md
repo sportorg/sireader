@@ -1,5 +1,1 @@
-# SportIdent Reader
-
-```
-pip install sportident
-```
+SportIdent Reader

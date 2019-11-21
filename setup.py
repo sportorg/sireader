@@ -11,7 +11,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 setup(
     name='sportident',
 
-    version='1.2.1',
+    version='1.2.2',
 
     description='Python module to communicate with SportIdent main stations',
     long_description=long_description,
