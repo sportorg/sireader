@@ -2,20 +2,21 @@ from setuptools import setup
 from codecs import open  # To use a consistent encoding
 from os import path
 
+from m2r import parse_from_file
+
 here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the relevant file
-with open(path.join(here, 'README.md'), encoding='utf-8') as f:
-    long_description = f.read()
+readme = parse_from_file(path.join(here, 'README.md'), encoding='utf-8')
 
 setup(
     name='sportident',
 
-    version='1.2.2',
+    version='1.2.3',
 
     description='Python module to communicate with SportIdent main stations',
-    long_description=long_description,
-    long_description_content_type='text/markdown',
+    long_description=readme,
+    long_description_content_type='text/x-rst',
 
     url='https://github.com/sportorg/sireader',
 
@@ -44,8 +45,6 @@ setup(
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.2',
-        'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
