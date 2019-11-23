@@ -1,5 +1,7 @@
 # SportIdent Reader
 
+[![Build Status](https://api.travis-ci.org/sportorg/sireader.svg)](https://travis-ci.org/sportorg/sireader)
+
 sportIdent.py is a python module to communicate with a SportIdent main station to read out SportIdent cards. 
 SportIdent is an electronic punching system mainly used for orienteering events.
 

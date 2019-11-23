@@ -422,8 +422,8 @@ class SIReader(object):
         # indirect and direct addressing mode
         # record structure: CN-STD1-STD0-DATE1-DATE0-PTH-PTL-MS
         # CN - control station code number, 0...255
-        # STD1   bit 17…9 -  Part of 24Bit SI-Station ID
-        # STD0   bit  8…2  -  Part of 24Bit SI-Station ID
+        # STD1   bit 17...9 -  Part of 24Bit SI-Station ID
+        # STD0   bit  8...2  -  Part of 24Bit SI-Station ID
         # DATE1  bit 7-6  bit 1-0   -  Part of 24Bit SI-Station ID
         #        bit 5-2  4bit year  0-16 Part of year
         #        bit 1-0   bit 3-2 Part of 4bit Month 1-12
@@ -465,7 +465,7 @@ class SIReader(object):
         # bit 3...1 - day of week, 000 = Sunday, 110 = Saturday
         # bit 5...4 - reserved
         # bit 7...6 - control station code number high
-        # (…511) (reserved)
+        # (...511) (reserved)
         # punching time PTH, PTL - 12h binary
         'SIpCard': {
             'CN2': 25,
@@ -811,10 +811,10 @@ class SIReader(object):
 
             # set ms for start and finish from control code
             #  4 byte punching record for start, start_r, finish, finish_r
-            #  record structure: TD – TSS - TH – TL
-            #  TD – halfday
+            #  record structure: TD - TSS - TH - TL
+            #  TD - halfday
             #  bit 0 - am/pm
-            #  bit 7 „1“ subsecond marker
+            #  bit 7 "1" subsecond marker
             #  punching time TH-TL - 12h binary [sec]
             if raw_cn:
                 ms = trunc(byte2int(raw_cn) * 1000.0 / 256)
