@@ -12,7 +12,7 @@ readme = parse_from_file(path.join(here, 'README.md'), encoding='utf-8')
 setup(
     name='sportident',
 
-    version='1.2.3',
+    version='1.2.4',
 
     description='Python module to communicate with SportIdent main stations',
     long_description=readme,
