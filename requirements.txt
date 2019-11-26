@@ -1,4 +1,3 @@
-m2r
 pyserial
 six
 pytest
