@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sportident"
-version = "1.2.5"
+version = "1.2.6"
 description = "Python module to communicate with SportIdent main stations"
 authors = ["Danil Akhtarov <help@o-ural.ru>"]
 license = "GPLv3+"
