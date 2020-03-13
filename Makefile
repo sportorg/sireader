@@ -1,6 +1,6 @@
 PYTHONPATH = PYTHONPATH=./
 TEST = $(PYTHONPATH) pytest --verbosity=2 --showlocals --log-level=DEBUG --strict $(arg) -k "$(k)"
-PYLINT_CODE = .
+PYLINT_CODE = sportident.py test_sportident.py
 CODE = $(PYLINT_CODE)
 
 .PHONY: test test-fast test-failed test-cov teamcity lint format check
