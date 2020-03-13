@@ -15,23 +15,23 @@ sportident.py - Classes to read out si card data from BSM-7/8 stations.
 """
 from __future__ import print_function
 
+import logging
 import os
 import re
 from binascii import hexlify
-from datetime import datetime, timedelta, time
-import logging
+from datetime import datetime, time, timedelta
 from math import trunc
 
 from serial import Serial
 from serial.serialutil import SerialException
-from six import int2byte, byte2int, iterbytes, PY3
+from six import PY3, byte2int, int2byte, iterbytes
 
 if PY3:
     # Make byte2int on Python 3.x compatible with
     # the fact that indexing into a byte variable
     # already returns an integer. With this byte2int(b[0])
     # works on 2.x and 3.x
-    def byte2int(x):
+    def byte2int(x):  # noqa: F811
         try:
             return x[0]
         except TypeError:
@@ -65,7 +65,7 @@ def _to_str(i, length):
     return string
 
 
-def _crc(s):
+def _crc(s):  # noqa: C901
     """Compute the crc checksum of value. This implementation is
     a reimplementation of the Java function in the SI Programmers
     manual examples."""
@@ -82,7 +82,7 @@ def _crc(s):
         else:
             s += b'\x00'
         for i in range(0, len(s), 2):
-            yield s[i:i + 2]
+            yield s[i : i + 2]
 
     if len(s) < 1:
         # return value for 1 or no data byte is 0
@@ -112,13 +112,11 @@ def _crc(s):
         pass
     # truncate to 16 bit and convert to char
     crc &= 0xFFFF
-    ret = int2byte(crc >> 8) + int2byte(crc & 0xFF)
-    return ret
+    return int2byte(crc >> 8) + int2byte(crc & 0xFF)
 
 
 def _crc_check(s, crc):
-    ret = _crc(s) == crc
-    return ret
+    return _crc(s) == crc
 
 
 class SIReader(object):
@@ -133,7 +131,8 @@ class SIReader(object):
     # Protocol characters
     STX = b'\x02'
     ETX = b'\x03'
-    ACK = b'\x06'  # when sent to BSx3..6 with a card inserted, causes beep until SI-card taken out
+    # when sent to BSx3..6 with a card inserted, causes beep until SI-card taken out
+    ACK = b'\x06'
     NAK = b'\x15'
     DLE = b'\x10'
     WAKEUP = b'\xFF'
@@ -141,17 +140,23 @@ class SIReader(object):
     # Basic protocol commands, currently unused
     BC_SET_CARDNO = b'\x30'
     BC_GET_SI5 = b'\x31'  # read out SI-card 5 data
-    BC_TRANS_REC = b'\x33'  # autosend timestamp (online control) in very old stations (BSF3)
-    BC_SI5_WRITE = b'\x43'  # write SI-card 5 data page: 02 43 (page: 0x30 to 0x37) (16 bytes) 03
+    # autosend timestamp (online control) in very old stations (BSF3)
+    BC_TRANS_REC = b'\x33'
+    # write SI-card 5 data page: 02 43 (page: 0x30 to 0x37) (16 bytes) 03
+    BC_SI5_WRITE = b'\x43'
     BC_SI5_DET = b'\x46'  # SI-card 5 inserted (46 49) or removed (46 4F)
     BC_SI5_DET_INSERT = b'\x49'
     BC_SI5_DET_REMOVE = b'\x4F'
     BC_TRANS_REC2 = b'\x53'  # autosend timestamp (online control)
     BC_TRANS_TIME = b'\x54'  # autosend timestamp (lightbeam trigger)
-    BC_GET_SI6 = b'\x61'  # read out SI-card 6 data (and in compatibility mode: model SI-card 8/9/10/11/SIAC/pCard/tCard as SI-card 6)
-    BC_SI6_WRITEPAGE = b'\x62'  # write SI-card 6 data page: 02 62 (block: 0x00 to 0x07) (page: 0x00 to 0x07) (16 bytes) 03
-    BC_SI6_READWORD = b'\x63'  # read SI-card 6 data word: 02 63 (block: 0x00 to 0x07) (page: 0x00 to 0x07) (word: 0x00 to 0x03) 03
-    BC_SI6_WRITEWORD = b'\x64'  # write SI-card 6 data word: 02 64 (block: 0x00 to 0x07) (page: 0x00 to 0x07) (word: 0x00 to 0x03) (4 bytes) 03
+    # read out SI-card 6 data (and in compatibility mode: model SI-card 8/9/10/11/SIAC/pCard/tCard as SI-card 6)
+    BC_GET_SI6 = b'\x61'
+    # write SI-card 6 data page: 02 62 (block: 0x00 to 0x07) (page: 0x00 to 0x07) (16 bytes) 03
+    BC_SI6_WRITEPAGE = b'\x62'
+    # read SI-card 6 data word: 02 63 (block: 0x00 to 0x07) (page: 0x00 to 0x07) (word: 0x00 to 0x03) 03
+    BC_SI6_READWORD = b'\x63'
+    # write SI-card 6 data word: 02 64 (block: 0x00 to 0x07) (page: 0x00 to 0x07) (word: 0x00 to 0x03) (4 bytes) 03
+    BC_SI6_WRITEWORD = b'\x64'
     BC_SI6_DET = b'\x66'  # SI-card 6 inserted
     BC_SET_MS = b'\x70'  # \x4D="M"aster, \x53="S"lave
     BC_GET_MS = b'\x71'
@@ -163,7 +168,8 @@ class SIReader(object):
     BC_GET_TIME = b'\x77'
     BC_OFF = b'\x78'
     BC_RESET = b'\x79'
-    BC_GET_BACKUP2 = b'\x7A'  # (for extended start and extended finish only) Note: response carries b'\xCA'!
+    # (for extended start and extended finish only) Note: response carries b'\xCA'!
+    BC_GET_BACKUP2 = b'\x7A'
     BC_SET_BAUD = b'\x7E'  # \x00=4800 baud, \x01=38400 baud
 
     # Extended protocol commands
@@ -173,12 +179,18 @@ class SIReader(object):
     C_SRR_WRITE = b'\xA2'  # ShortRangeRadio - SysData write
     C_SRR_READ = b'\xA3'  # ShortRangeRadio - SysData read
     C_SRR_QUERY = b'\xA6'  # ShortRangeRadio - network device query
-    C_SRR_PING = b'\xA7'  # ShortRangeRadio - heartbeat from linked devices, every 50 seconds
+    C_SRR_PING = (
+        b'\xA7'
+    )  # ShortRangeRadio - heartbeat from linked devices, every 50 seconds
     C_SRR_ADHOC = b'\xA8'  # ShortRangeRadio - ad-hoc message, f.ex. from SI-ActiveCard
     C_GET_SI5 = b'\xB1'  # read out SI-card 5 data
-    C_SI5_WRITE = b'\xC3'  # write SI-card 5 data page: 02 C3 11 (page: 0x00 to 0x07) (16 bytes) (CRC) 03
+    C_SI5_WRITE = (
+        b'\xC3'
+    )  # write SI-card 5 data page: 02 C3 11 (page: 0x00 to 0x07) (16 bytes) (CRC) 03
     C_TRANS_REC = b'\xD3'  # autosend timestamp (online control)
-    C_CLEAR_CARD = b'\xE0'  # found on SI-dev-forum: 02 E0 00 E0 00 03 (http://www.sportident.com/index.php?option=com_kunena&view=topic&catid=8&id=56#59)
+    # found on SI-dev-forum: 02 E0 00 E0 00 03
+    # (http://www.sportident.com/index.php?option=com_kunena&view=topic&catid=8&id=56#59)
+    C_CLEAR_CARD = b'\xE0'
     C_GET_SI6 = b'\xE1'  # read out SI-card 6 data block
     C_SI5_DET = b'\xE5'  # SI-card 5 inserted
     C_SI6_DET = b'\xE6'  # SI-card 6 inserted
@@ -229,7 +241,7 @@ class SIReader(object):
     #   9597: BS7-S (Sprinter)
     #   9D9A: BS11-BL (SIAC / Air+)
     #   B197 / B198: BS7-P / BS8-P (Printer)
-    #   B897: BS7-GSM
+    #   B897: BS7-GSM`
     #   CD9B: BS11-BS-red / BS11-BS-blue (SIAC / Air+)
 
     O_MEM_SIZE = b'\x0D'  # 1 byte - in KB
@@ -238,12 +250,16 @@ class SIReader(object):
     O_BACKUP_PTR = b'\x1C'  # 4 bytes - at positions 1C,1D,21,22
     O_SI6_CB = b'\x33'  # 1 byte - bitfield defining which SI Card 6 blocks to read:
     #   \x00=\xC1=read block0,6,7; \x08=\xFF=read all 8 blocks
-    O_SRR_CHANNEL = b'\x34'  # 1 byte - SRR-dongle frequency band: 0x00="red", 0x01="blue"
+    O_SRR_CHANNEL = (
+        b'\x34'
+    )  # 1 byte - SRR-dongle frequency band: 0x00="red", 0x01="blue"
     O_MEM_OVERFLOW = b'\x3D'  # 1 byte - memory overflow if != 0x00
-    O_PROGRAM = b'\x70'  # 1 byte - station program: xx0xxxxxb competition, xx1xxxxxb training
+    # 1 byte - station program: xx0xxxxxb competition, xx1xxxxxb training
+    O_PROGRAM = b'\x70'
     O_MODE = b'\x71'  # 1 byte - see SI station modes below
     O_STATION_CODE = b'\x72'  # 1 byte
-    O_FEEDBACK = b'\x73'  # 1 byte - feedback on punch (and other unknown bits), bit mask value:
+    # 1 byte - feedback on punch (and other unknown bits), bit mask value:
+    O_FEEDBACK = b'\x73'
     #   xxxxxxx1b optical feedback
     #   xxxxx1xxb audible feedback
     O_PROTO = b'\x74'  # 1 byte - protocol configuration, bit mask value:
@@ -254,8 +270,10 @@ class SIReader(object):
     #   1xxxxxxxb read out SI-card after punch (only for punch modes;
     #             depends on bit 2: auto send out or handshake)
     O_WAKEUP_DATE = b'\x75'  # 3 bytes - YYMMDD
-    O_WAKEUP_TIME = b'\x78'  # 3 bytes - 1 byte day (see below), 2 bytes seconds after midnight/midday
-    O_SLEEP_TIME = b'\x7B'  # 3 bytes - 1 byte day (see below), 2 bytes seconds after midnight/midday
+    # 3 bytes - 1 byte day (see below), 2 bytes seconds after midnight/midday
+    O_WAKEUP_TIME = b'\x78'
+    # 3 bytes - 1 byte day (see below), 2 bytes seconds after midnight/midday
+    O_SLEEP_TIME = b'\x7B'
     #   xxxxxxx0b - seconds relative to midnight/midday: 0 = am, 1 = pm
     #   xxxx000xb - day of week: 000 = Sunday, 110 = Saturday
     #   xx00xxxxb - week counter 0..3, relative to programming date
@@ -297,7 +315,9 @@ class SIReader(object):
     D_THURSDAY = 0b100
     D_FRIDAY = 0b101
     D_SATURDAY = 0b110
-    D_UNKNOWN = 0b111  # in D3-message from SIAC-beacon where no weekday-info is transmitted
+    D_UNKNOWN = (
+        0b111
+    )  # in D3-message from SIAC-beacon where no weekday-info is transmitted
 
     # Backup memory record length
     REC_LEN = 8  # Only in extended protocol, otherwise 6!
@@ -415,7 +435,6 @@ class SIReader(object):
             'PTL': 3,
             'BC': 8,
         },
-
         # tCard support
         # 8 byte punching record
         #
@@ -454,7 +473,6 @@ class SIReader(object):
             'PTL': 6,
             'BC': 2,
         },
-
         # pCard support
         # 4 byte punching record; same as in SICard6
         # indirect and direct addressing mode
@@ -520,8 +538,11 @@ class SIReader(object):
             self._connect_reader(port)
             return
         else:
-            scan_ports = [os.path.join('/dev', f) for f in os.listdir('/dev') if
-                          re.match('ttyS.*|ttyUSB.*', f)]
+            scan_ports = [
+                os.path.join('/dev', f)
+                for f in os.listdir('/dev')
+                if re.match('ttyS.*|ttyUSB.*', f)
+            ]
             if len(scan_ports) == 0:
                 errors = 'no serial ports found'
 
@@ -531,7 +552,6 @@ class SIReader(object):
                     return
                 except (SIReaderException, SIReaderTimeout) as msg:
                     errors = '%sport: %s: %s\n' % (errors, port, msg)
-                    pass
 
         raise SIReaderException('No SI Reader found. Possible reasons: %s' % errors)
 
@@ -572,13 +592,17 @@ class SIReader(object):
         @param code: control code (1-1023)
         """
         if code < 1 or code > 1023:
-            raise SIReaderException("Invalid control code: '%i'! Supported code range: 1-1023." % code)
+            raise SIReaderException(
+                "Invalid control code: '%i'! Supported code range: 1-1023." % code
+            )
         # lower byte of control code
         code_low = int2byte(code & 0xFF)
         # high byte of control code, only first 2 bits are used, the rest is set to 1
         code_high = int2byte((code >> 2) | 0b00111111)
         try:
-            self._send_command(SIReader.C_SET_SYS_VAL, SIReader.O_STATION_CODE + code_low + code_high)
+            self._send_command(
+                SIReader.C_SET_SYS_VAL, SIReader.O_STATION_CODE + code_low + code_high
+            )
         finally:
             self._update_proto_config()
         self.beep()
@@ -609,13 +633,16 @@ class SIReader(object):
         """Set si station internal time.
         @param t: time as a python datetime object.
         """
-        bintime = (_to_str(int(t.strftime('%y')), 1)
-                   + _to_str(t.month, 1)
-                   + _to_str(t.day, 1)
-                   + _to_str(((t.isoweekday() % 7) << 1) + t.hour // 12, 1)
-                   + _to_str((t.hour % 12) * 3600 + t.minute * 60 + t.second, 2)
-                   + _to_str(int(round(t.microsecond / 1000000.0 * 256)), 1)
-                   )
+        bintime = ''.join(
+            (
+                _to_str(int(t.strftime('%y')), 1),
+                _to_str(t.month, 1),
+                _to_str(t.day, 1),
+                _to_str(((t.isoweekday() % 7) << 1) + t.hour // 12, 1),
+                _to_str((t.hour % 12) * 3600 + t.minute * 60 + t.second, 2),
+                _to_str(int(round(t.microsecond / 1000000.0 * 256)), 1),
+            )
+        )
 
         self._send_command(SIReader.C_SET_TIME, bintime)
         self.beep()
@@ -646,7 +673,7 @@ class SIReader(object):
             return not self.proto_config['ext_proto']
         return False
 
-    def _connect_reader(self, port):
+    def _connect_reader(self, port):  # noqa: C901
         """Connect to SI Reader.
         @param port: serial port
         """
@@ -679,11 +706,13 @@ class SIReader(object):
                 self._serial.write(SIReader.WAKEUP + SIReader.STX)
                 self._send_command(SIReader.C_SET_MS, SIReader.P_MS_DIRECT)
             except SIReaderException as msg:
-                raise SIReaderException('This module only works with BSM7/8 stations: %s' % msg)
+                raise SIReaderException(
+                    'This module only works with BSM7/8 stations: %s' % msg
+                )
 
         self.port = port
         self.baudrate = self._serial.baudrate
-        _logger.debug("Device connected with speed = " + str(self.baudrate))
+        _logger.debug('Device connected with speed = %s', str(self.baudrate))
         self._update_proto_config()
         self.get_type()
 
@@ -708,11 +737,14 @@ class SIReader(object):
 
     def _set_proto_config(self, config):
         try:
-            config_byte = int2byte((config['ext_proto'] << 0) |
-                                   (config['auto_send'] << 1) |
-                                   (config['handshake'] << 2) |
-                                   (config['pw_access'] << 4) |
-                                   (config['punch_read'] << 7))
+            ext_proto = config['ext_proto'] << 0
+            auto_send = config['auto_send'] << 1
+            handshake = config['handshake'] << 2
+            pw_access = config['pw_access'] << 4
+            punch_read = config['punch_read'] << 7
+            config_byte = int2byte(
+                ext_proto | auto_send | handshake | pw_access | punch_read
+            )
             self._send_command(SIReader.C_SET_SYS_VAL, SIReader.O_PROTO + config_byte)
         finally:
             self._update_proto_config()
@@ -757,11 +789,9 @@ class SIReader(object):
             if byte2int(number[1]) < 2:
                 # Card series 0 and 1 do not have the 0/1 printed on the card
                 return ret
-            else:
-                return byte2int(number[1]) * 100000 + ret
-        else:
-            # SI6/8/9
-            return nr
+            return byte2int(number[1]) * 100000 + ret
+        # SI6/8/9
+        return nr
 
     @staticmethod
     def _decode_time(raw_time, raw_ptd=None, reftime=None, raw_cn=None):
@@ -802,8 +832,9 @@ class SIReader(object):
 
             # subtract a whole week if the dow week is the same but the punchtime
             # is later on the same day
-            if (reftime.weekday() == dow
-                    and punchtime > timedelta(hours=reftime.hour, minutes=reftime.minute, seconds=reftime.second)):
+            if reftime.weekday() == dow and punchtime > timedelta(
+                hours=reftime.hour, minutes=reftime.minute, seconds=reftime.second
+            ):
                 reftime -= timedelta(days=7)
             else:
                 # adjust reftime according to weekday information
@@ -820,12 +851,16 @@ class SIReader(object):
                 ms = trunc(byte2int(raw_cn) * 1000.0 / 256)
                 punchtime += timedelta(milliseconds=ms)
 
-            ref_day = reftime.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+            ref_day = reftime.replace(
+                hour=0, minute=0, second=0, microsecond=0, tzinfo=None
+            )
             return ref_day + punchtime
 
         # No PTD byte available, we have to rely on guessing the closest 12h time
 
-        ref_day = reftime.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+        ref_day = reftime.replace(
+            hour=0, minute=0, second=0, microsecond=0, tzinfo=None
+        )
         ref_hour = reftime - ref_day
         t_noon = timedelta(hours=12)
 
@@ -861,30 +896,39 @@ class SIReader(object):
 
         # the slicing of data is necessary for Python 3 to get a bytes object instead
         # of an int
-        ret['card_number'] = SIReader._decode_cardnr(b'\x00'
-                                                     + data[card['CN2']:card['CN2'] + 1]
-                                                     + data[card['CN1']:card['CN1'] + 1]
-                                                     + data[card['CN0']:card['CN0'] + 1])
+        number = b'\x00'
+        number += data[card['CN2'] : card['CN2'] + 1]
+        number += data[card['CN1'] : card['CN1'] + 1]
+        number += data[card['CN0'] : card['CN0'] + 1]
+        ret['card_number'] = SIReader._decode_cardnr(number)
 
-        ret['start'] = SIReader._decode_time(data[card['ST']:card['ST'] + 2],
-                                             data[card['STD']] if card['STD'] else None,
-                                             reftime,
-                                             data[card['STD'] + 1] if card['STD'] else None)
-        ret['finish'] = SIReader._decode_time(data[card['FT']:card['FT'] + 2],
-                                              data[card['FTD']] if card['FTD'] is not None else None,
-                                              reftime,
-                                              data[card['FTD'] + 1] if card['FTD'] else None)
-        ret['check'] = SIReader._decode_time(data[card['CT']:card['CT'] + 2],
-                                             data[card['CTD']] if card['CTD'] is not None else None,
-                                             reftime)
+        ret['start'] = SIReader._decode_time(
+            data[card['ST'] : card['ST'] + 2],
+            data[card['STD']] if card['STD'] else None,
+            reftime,
+            data[card['STD'] + 1] if card['STD'] else None,
+        )
+        ret['finish'] = SIReader._decode_time(
+            data[card['FT'] : card['FT'] + 2],
+            data[card['FTD']] if card['FTD'] is not None else None,
+            reftime,
+            data[card['FTD'] + 1] if card['FTD'] else None,
+        )
+        ret['check'] = SIReader._decode_time(
+            data[card['CT'] : card['CT'] + 2],
+            data[card['CTD']] if card['CTD'] is not None else None,
+            reftime,
+        )
         if card['LT'] is not None:
-            ret['clear'] = SIReader._decode_time(data[card['LT']:card['LT'] + 2],
-                                                 data[card['LTD']] if card['LTD'] is not None else None,
-                                                 reftime)
+            ret['clear'] = SIReader._decode_time(
+                data[card['LT'] : card['LT'] + 2],
+                data[card['LTD']] if card['LTD'] is not None else None,
+                reftime,
+            )
         else:
             ret['clear'] = None  # SI 5 and 9 cards don't store the clear time
 
-        punch_count = byte2int(data[card['RC']:card['RC'] + 1])
+        punch_count = byte2int(data[card['RC'] : card['RC'] + 1])
         if card_type == 'SI5':
             # RC is the index of the next punch on SI5
             punch_count -= 1
@@ -907,7 +951,7 @@ class SIReader(object):
 
             ptd = data[i + card['PTD']] if card['PTD'] is not None else None
             cn = byte2int(data[i + card['CN']])
-            pt = data[i + card['PTH']:i + card['PTL'] + 1]
+            pt = data[i + card['PTH'] : i + card['PTL'] + 1]
 
             SIReader._append_punch(ret['punches'], cn, pt, ptd, reftime)
 
@@ -921,21 +965,27 @@ class SIReader(object):
             if self._serial.inWaiting() != 0:
                 raise SIReaderException(
                     'Input buffer must be empty before sending command. Currently %s bytes in the input buffer.'
-                    % self._serial.inWaiting())
+                    % self._serial.inWaiting()
+                )
             command_string = command + int2byte(len(parameters)) + parameters
             crc = _crc(command_string)
             cmd = SIReader.STX + command_string + crc + SIReader.ETX
-            parameters_s = ' '.join([hexlify(int2byte(c)).decode('ascii') for c in parameters])
-            _logger.debug("==>> command '%s', parameters %s, crc %s" % (hexlify(command).decode('ascii'),
-                                                                        parameters_s,
-                                                                        hexlify(crc).decode('ascii'),))
+            parameters_s = ' '.join(
+                [hexlify(int2byte(c)).decode('ascii') for c in parameters]
+            )
+            _logger.debug(
+                "==>> command '%s', parameters %s, crc %s",
+                hexlify(command).decode('ascii'),
+                parameters_s,
+                hexlify(crc).decode('ascii'),
+            )
             self._serial.write(cmd)
         except (SerialException, OSError) as msg:
             raise SIReaderException('Could not send command: %s' % msg)
 
         return self._read_command()
 
-    def _read_command(self, timeout=None):
+    def _read_command(self, timeout=None):  # noqa: C901
 
         try:
             old_timeout = 5
@@ -981,12 +1031,13 @@ class SIReader(object):
                     etx = self._serial.read()
                 data = tmp
 
-                _logger.debug("<<== command '%s', station %s, data %s, etx %s" % (
+                _logger.debug(
+                    "<<== command '%s', station %s, data %s, etx %s",
                     hexlify(cmd).decode('ascii'),
                     hexlify(station).decode('ascii'),
                     ' '.join([hexlify(int2byte(c)).decode('ascii') for c in all_bytes]),
                     hexlify(etx).decode('ascii'),
-                ))
+                )
             else:
                 # Read length, data, crc, ETX
                 length = self._serial.read()
@@ -996,14 +1047,15 @@ class SIReader(object):
                 crc = self._serial.read(2)
                 etx = self._serial.read()
 
-                _logger.debug("<<== command '%s', len %i, station %s, data %s, crc %s, etx %s" % (
+                _logger.debug(
+                    "<<== command '%s', len %i, station %s, data %s, crc %s, etx %s",
                     hexlify(cmd).decode('ascii'),
                     byte2int(length),
                     hexlify(station).decode('ascii'),
                     ' '.join([hexlify(int2byte(c)).decode('ascii') for c in data]),
                     hexlify(crc).decode('ascii'),
                     hexlify(etx).decode('ascii'),
-                ))
+                )
 
                 if etx != SIReader.ETX:
                     raise SIReaderException('No ETX byte received.')
@@ -1020,9 +1072,8 @@ class SIReader(object):
         return cmd, data
 
     def get_type(self):
-        # conf = self._update_proto_config()
         conf = self.proto_config
-        _logger.debug('station code = ' + str(self.station_code))
+        _logger.debug('station code = %s', self.station_code)
         if conf['mode'] == SIReader.M_READOUT:
             _logger.debug('Operating mode - BSM7/8 Readout')
         elif conf['mode'] == SIReader.M_SRR:
@@ -1059,12 +1110,10 @@ class SIReaderReadout(SIReader):
         Returns true on state changes and false otherwise. If other commands
         are received an Exception is raised."""
 
-        # if not self.proto_config['ext_proto']:
-        #     raise SIReaderException('This command only supports stations in "Extended Protocol" '
-        #                             'mode. Switch mode first')
-
         if not self.proto_config['mode'] in [SIReader.M_READOUT]:
-            raise SIReaderException("Station must be in 'Read SI cards' operating mode! Change operating mode first.")
+            raise SIReaderException(
+                "Station must be in 'Read SI cards' operating mode! Change operating mode first."
+            )
 
         if self._serial.inWaiting() == 0:
             return False
@@ -1084,16 +1133,13 @@ class SIReaderReadout(SIReader):
         """Reads out the SI Card currently inserted into the station. The card must be
         detected with poll_sicard before."""
 
-        # if not self.proto_config['ext_proto']:
-        #     raise SIReaderException('This command only supports stations in "Extended Protocol" '
-        #                             'mode. Switch mode first')
-
         if not self.proto_config['mode'] == SIReader.M_READOUT:
-            raise SIReaderException("Station must be in 'Read SI cards' operating mode! Change operating mode first.")
+            raise SIReaderException(
+                "Station must be in 'Read SI cards' operating mode! Change operating mode first."
+            )
 
         if self.cardtype == 'SI5':
-            raw_data = self._send_command(SIReader.C_GET_SI5,
-                                          b'')[1]
+            raw_data = self._send_command(SIReader.C_GET_SI5, b'')[1]
         elif self.cardtype == 'SI6':
             block_0 = self._send_command(SIReader.C_GET_SI6, SIReader.P_SI6_CB)[1][1:]
             block_1 = self._read_command()[1][1:]
@@ -1108,15 +1154,16 @@ class SIReaderReadout(SIReader):
                 block_5 = self._read_command()[1][1:]
                 block_6 = self._read_command()[1][1:]
                 block_7 = self._read_command()[1][1:]
-                raw_data = block_0 + block_6 + block_7 + block_2 + block_3 + block_4 + block_5
+                raw_data = (
+                    block_0 + block_6 + block_7 + block_2 + block_3 + block_4 + block_5
+                )
             else:
                 raw_data = block_0 + block_1 + block_2  # 0, 6, 7 blocks of SI6
 
         elif self.cardtype in ('SI8', 'SI9', 'SIpCard', 'SItCard'):
             raw_data = b''
             for b in range(SIReader.CARD[self.cardtype]['BC']):
-                raw_data += self._send_command(SIReader.C_GET_SI9,
-                                               int2byte(b))[1][1:]
+                raw_data += self._send_command(SIReader.C_GET_SI9, int2byte(b))[1][1:]
 
         elif self.cardtype == 'SI10':
             # Reading out SI10 cards block by block, don't read empty punches
@@ -1149,7 +1196,7 @@ class SIReaderReadout(SIReader):
         except (SerialException, OSError) as msg:
             raise SIReaderException('Could not send ACK: %s' % msg)
 
-    def _read_command(self, timeout=None):
+    def _read_command(self, timeout=None):  # noqa: C901
         """Reads commands from the station. As a station in readout mode can send a
         card inserted or card removed event at any time we have to intercept these events
         here."""
@@ -1159,15 +1206,15 @@ class SIReaderReadout(SIReader):
         if cmd == SIReader.C_SI_REM:
             self.sicard = None
             self.cardtype = None
-            raise SIReaderCardChanged("SI-Card removed during command.")
+            raise SIReaderCardChanged('SI-Card removed during command.')
         elif cmd == SIReader.C_SI5_DET:
             self.sicard = self._decode_cardnr(data)
             self.cardtype = 'SI5'
-            raise SIReaderCardChanged("SI-Card inserted during command.")
+            raise SIReaderCardChanged('SI-Card inserted during command.')
         elif cmd == SIReader.C_SI6_DET:
             self.sicard = _to_int(data)
             self.cardtype = 'SI6'
-            raise SIReaderCardChanged("SI-Card inserted during command.")
+            raise SIReaderCardChanged('SI-Card inserted during command.')
         elif cmd == SIReader.C_SI9_DET:
             # SI 9 sends corrupt first byte (insignificant)
             self.sicard = _to_int(data[1:])
@@ -1183,7 +1230,7 @@ class SIReaderReadout(SIReader):
                 self.cardtype = 'SIpCard'
             else:
                 raise SIReaderException('Unknown cardtype!')
-            raise SIReaderCardChanged("SI-Card inserted during command.")
+            raise SIReaderCardChanged('SI-Card inserted during command.')
 
         elif cmd == SIReader.BC_SI6_DET:
             """Legacy protocol - all types besides SI5
@@ -1210,7 +1257,7 @@ class SIReaderReadout(SIReader):
                 self.cardtype = 'SI8'
             else:
                 raise SIReaderException('Unknown cardtype!')
-            raise SIReaderCardChanged("SI-Card inserted during command.")
+            raise SIReaderCardChanged('SI-Card inserted during command.')
         elif cmd == SIReader.BC_SI5_DET:
             """Legacy protocol - SI5
             Card 5 detected STX, F-ASCII, I-ASCII, ETX
@@ -1224,14 +1271,14 @@ class SIReaderReadout(SIReader):
                 else:
                     self.sicard = 2
 
-                raise SIReaderCardChanged("SI-Card inserted during command.")
+                raise SIReaderCardChanged('SI-Card inserted during command.')
             else:
                 self.sicard = None
                 self.cardtype = None
-                raise SIReaderCardChanged("SI-Card removed during command.")
+                raise SIReaderCardChanged('SI-Card removed during command.')
         elif cmd == SIReader.C_TRANS_REC:
             self.sicard = self._decode_cardnr(data)
-            _logger.exception('card num = ' + str(self.sicard))
+            _logger.exception('card num = %s', self.sicard)
 
         return cmd, data
 
@@ -1253,9 +1300,14 @@ class SIReaderControl(SIReader):
     def read_sicard(self):
         if len(self.punches) > 0:
             punch = self.punches.pop(0)
-            ret = {'start': time(), 'finish': time(), 'clear': time(), 'check': time(), 'card_number': punch[0],
-                   'punches': [(punch[2], punch[1])]}
-            return ret
+            return {
+                'start': time(),
+                'finish': time(),
+                'clear': time(),
+                'check': time(),
+                'card_number': punch[0],
+                'punches': [(punch[2], punch[1])],
+            }
         return None
 
     def ack_sicard(self):
@@ -1266,8 +1318,10 @@ class SIReaderControl(SIReader):
         @return: list of (cardnr, punchtime) tuples, empty list if no new punches are available
         """
         if not self.proto_config['auto_send']:
-            raise SIReaderException('This command only supports stations in "Autosend" '
-                                    'mode. Switch mode first')
+            raise SIReaderException(
+                'This command only supports stations in "Autosend" '
+                'mode. Switch mode first'
+            )
 
         while True:
             try:
@@ -1279,17 +1333,26 @@ class SIReaderControl(SIReader):
                 code = self.station_code
                 if code > 3000:
                     code -= 16 * 16 * 16 * 8
-                self.punches.append((self._decode_cardnr(c[1][SIReader.T_CN:SIReader.T_CN + 4]),
-                                     self._decode_time(c[1][SIReader.T_TIME:SIReader.T_TIME + 2],
-                                                       raw_ptd=c[1][SIReader.T_TIME - 1],
-                                                       raw_cn=c[1][SIReader.T_TIME + 2]),
-                                     code))
+                self.punches.append(
+                    (
+                        self._decode_cardnr(c[1][SIReader.T_CN : SIReader.T_CN + 4]),
+                        self._decode_time(
+                            c[1][SIReader.T_TIME : SIReader.T_TIME + 2],
+                            raw_ptd=c[1][SIReader.T_TIME - 1],
+                            raw_cn=c[1][SIReader.T_TIME + 2],
+                        ),
+                        code,
+                    )
+                )
         else:
-            raise SIReaderException('Unexpected command %s received' % hex(byte2int(c[0])))
+            raise SIReaderException(
+                'Unexpected command %s received' % hex(byte2int(c[0]))
+            )
 
 
 class SRRPunch(object):
     """Service class to describe and parse punch, received via SRR"""
+
     # station mode
     T_CLEAR = 1
     T_CONTROL = 2
@@ -1326,9 +1389,11 @@ class SRRPunch(object):
         else:
             self.station_code = station
 
-        self.time = SIReader._decode_time(data[SIReader.T_TIME:SIReader.T_TIME + 2],
-                                          raw_ptd=data[SIReader.T_TIME - 1],
-                                          raw_cn=data[SIReader.T_TIME + 2])
+        self.time = SIReader._decode_time(
+            data[SIReader.T_TIME : SIReader.T_TIME + 2],
+            raw_ptd=data[SIReader.T_TIME - 1],
+            raw_cn=data[SIReader.T_TIME + 2],
+        )
 
         self.index = _to_int(data[9:10])
         self.max_index = _to_int(data[10:11])
@@ -1337,12 +1402,12 @@ class SRRPunch(object):
         self.radio_type = _to_int(data[8:9]) // 128
 
         _logger.debug(data)
-        _logger.debug('card_num = ' + str(self.card_number))
-        _logger.debug('station_code = ' + str(self.station_code))
-        _logger.debug('time = ' + str(self.time))
-        _logger.debug('index = ' + str(self.index) + '/' + str(self.max_index))
-        _logger.debug('type = ' + self.T_LIST[self.type])
-        _logger.debug('radio_type = ' + self.R_LIST[self.radio_type])
+        _logger.debug('card_num = %s', str(self.card_number))
+        _logger.debug('station_code = %s', str(self.station_code))
+        _logger.debug('time = %s', str(self.time))
+        _logger.debug('index = %s/%s', str(self.index), str(self.max_index))
+        _logger.debug('type = %s', self.T_LIST[self.type])
+        _logger.debug('radio_type = %s', self.R_LIST[self.radio_type])
 
 
 class SRRGroup(object):
@@ -1358,7 +1423,7 @@ class SRRGroup(object):
         self.sort()
 
     def sort(self):
-        self.punches = sorted(self.punches, key=lambda x: x.index)
+        self.punches.sort(key=lambda x: x.index)
 
     def is_completed(self):
         if len(self.punches) < self.count:
@@ -1374,8 +1439,14 @@ class SRRGroup(object):
     def get_data(self):
         # use SI Readout compatible format
 
-        ret = {'card_number': self.card, 'punches': [], 'start': time(), 'finish': time(), 'clear': time(),
-               'check': time()}
+        ret = {
+            'card_number': self.card,
+            'punches': [],
+            'start': time(),
+            'finish': time(),
+            'clear': time(),
+            'check': time(),
+        }
         for i in self.punches:
             assert isinstance(i, SRRPunch)
             if i.type == SRRPunch.T_CONTROL:
@@ -1425,13 +1496,13 @@ class SIReaderSRR(SIReader):
         # note, SRR dongle can receive punches from several SIACs at a time
         while True:
             try:
-                c = self._read_command(timeout=0)
+                command = self._read_command(timeout=0)
             except SIReaderTimeout:
                 break
 
-            if c[0] == SIReader.C_TRANS_REC:
+            if command[0] == SIReader.C_TRANS_REC:
                 punch = SRRPunch()
-                punch.read_from_data(self.station_code, c[1])
+                punch.read_from_data(self.station_code, command[1])
 
                 if punch.station_code == 255:
                     # some service data, skip # TODO ask vendor about this
@@ -1450,10 +1521,12 @@ class SIReaderSRR(SIReader):
 
                 if group.is_last_punch_received():
                     # if dongle get all punches from the set, add it to queue
-                    print('adding card to queue: ' + str(card))
+                    _logger.info('adding card to queue: %s', card)
                     self.queue.append(self.groups.pop(card))
         else:
-            raise SIReaderException('Unexpected command %s received' % hex(byte2int(c[0])))
+            raise SIReaderException(
+                'Unexpected command %s received' % hex(byte2int(command[0]))
+            )
 
         if len(self.queue) > 0:
             return self.queue.pop(0)

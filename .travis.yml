@@ -1,4 +1,7 @@
 language: python
+
+cache: pip
+
 python:
   - "2.7"
   - "3.4"
@@ -6,10 +9,26 @@ python:
   - "3.6"
   - "3.7"
   - "3.8"
-  - "3.8-dev"
 # command to install dependencies
 install:
-  - pip install -r requirements.txt
-  - pip install .
+  - pip install poetry==1.0 codecov
+  - poetry install
 # command to run tests
-script: pytest
+script:
+  - make lint
+  - make test
+
+after_success:
+  - codecov
+
+before_deploy:
+  - poetry build
+
+deploy:
+  provider: script
+  script: poetry publish --no-interaction --username=$PYPI_USERNAME --password=$PYPI_PASSWORD
+  skip_cleanup: true
+  skip_existing: true
+  on:
+    branch: master
+    tags: true
