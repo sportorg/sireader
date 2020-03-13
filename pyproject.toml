@@ -8,6 +8,9 @@ readme = 'README.md'
 repository = "https://github.com/sportorg/sireader"
 homepage = "https://pypi.org/project/sportident"
 keywords = ["sportident", "orienteering", "sportorg"]
+packages = [
+    { include = "sportident.py" },
+]
 classifiers = [
     # How mature is this project? Common values are
     'Development Status :: 5 - Production/Stable',
@@ -33,9 +36,9 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.8"
-pyserial = "^3.4"
-six = "^1.14.0"
+python = "*"
+pyserial = "*"
+six = "*"
 
 [tool.poetry.dev-dependencies]
 allure-pytest = "^2.6.4"
