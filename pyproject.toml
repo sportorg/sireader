@@ -4,8 +4,8 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "1.2.6"
-tag_format = "$version"
+version = "1.2.7"
+tag_format = "v$version"
 version_files = [
     "pyproject.toml:version"
 ]
@@ -14,7 +14,7 @@ update_changelog_on_bump = true
 
 [tool.poetry]
 name = "sportident"
-version = "1.2.6"
+version = "1.2.7"
 description = "Python module to communicate with SportIdent main stations"
 authors = ["Danil Akhtarov <daxartio@gmail.com>"]
 license = "GPLv3+"
