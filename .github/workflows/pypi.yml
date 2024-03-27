@@ -1,0 +1,29 @@
+name: Publish to PYPI
+
+on:
+  push:
+    tags:
+      - '*'
+  release:
+    types:
+      - created
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+
+      - name: Install poetry
+        run: make install-poetry
+
+      - name: Publish package to pypi
+        run: make publish
+        env:
+          pypi_username: ${{ secrets.PYPI_USERNAME }}
+          pypi_password: ${{ secrets.PYPI_PASSWORD }}

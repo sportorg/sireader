@@ -1,74 +1,136 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "1.2.6"
+tag_format = "$version"
+version_files = [
+    "pyproject.toml:version"
+]
+bump_message = "chore(release): version $current_version → $new_version"
+update_changelog_on_bump = true
+
 [tool.poetry]
 name = "sportident"
 version = "1.2.6"
 description = "Python module to communicate with SportIdent main stations"
-authors = ["Danil Akhtarov <help@o-ural.ru>"]
+authors = ["Danil Akhtarov <daxartio@gmail.com>"]
 license = "GPLv3+"
-readme = 'README.md'
+readme = "README.md"
 repository = "https://github.com/sportorg/sireader"
-homepage = "https://pypi.org/project/sportident"
+homepage = "https://github.com/sportorg/sireader"
 keywords = ["sportident", "orienteering", "sportorg"]
 packages = [
     { include = "sportident.py" },
 ]
-classifiers = [
-    # How mature is this project? Common values are
-    'Development Status :: 5 - Production/Stable',
 
-    # Indicate who your project is intended for
-    'Intended Audience :: Developers',
-    'Topic :: System :: Hardware :: Hardware Drivers',
-
-    # Pick your license as you wish (should match "license" above)
-    'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
-
-    # Specify the Python versions you support here. In particular, ensure
-    # that you indicate whether you support Python 2, Python 3 or both.
-    'Programming Language :: Python :: 2',
-    'Programming Language :: Python :: 2.6',
-    'Programming Language :: Python :: 2.7',
-    'Programming Language :: Python :: 3',
-    'Programming Language :: Python :: 3.4',
-    'Programming Language :: Python :: 3.5',
-    'Programming Language :: Python :: 3.6',
-    'Programming Language :: Python :: 3.7',
-    'Programming Language :: Python :: 3.8',
-]
+[tool.poetry.urls]
+Changelog = "https://github.com/sportorg/sireader/blob/main/CHANGELOG.md/"
 
 [tool.poetry.dependencies]
-python = "*"
+python = "^3.8.1"
 pyserial = "*"
 six = "*"
 
-[tool.poetry.dev-dependencies]
-allure-pytest = "^2.6.4"
-autoflake = "^1.3"
-black = "=19.3b0"
-flake8 = "^3.7"
-flake8-builtins = "^1.4"
-flake8-comprehensions = "^1.4"
-flake8-eradicate = "^0.2.0"
-flake8-isort = "^2.6"
-flake8-logging-format = "^0.6.0"
-flake8-print = "^3.1"
-flake8-pytest = "^1.3"
-flake8-pytest-style = "^0.1.3"
-flake8-quotes = "^1.0"
-flake8-return = "^1.0"
-isort = {version = "^4.3",extras = ["pyproject"]}
-mypy = "*"
-pep8-naming = "^0.8.0"
-pylint = "^2.2"
-pytest = "^4.0"
-pytest-cov = "^2.6"
-pytest-deadfixtures = "^2.1"
-pytest-mock = "^1.10"
-responses = "^0.10.9"
-safety = "^1.8"
-teamcity-messages = "^1.21"
-unify = "^0.4.0"
+[tool.poetry.group.dev.dependencies]
+black = "^23.7.0"
+mypy = "^1.7.1"
+pytest = "^7.4.2"
+pytest-cov = "^4.1.0"
+pytest-deadfixtures = "^2.2.1"
+pytest-mock = "^3.11.1"
+ruff = "^0.2.2"
 
+[tool.poetry.group.git.dependencies]
+commitizen = "^3.12.0"
 
-[build-system]
-requires = ["poetry>=0.12"]
-build-backend = "poetry.masonry.api"
+[tool.mypy]
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[tool.coverage.run]
+omit = ["tests/*", "**/__main__.py", "**/.venv/*", "**/site-packages/*"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 27
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers --showlocals --verbosity 2"
+log_level = "DEBUG"
+
+[tool.ruff.lint]
+select = [
+    "F",
+    "E",
+    "W",
+    "C90",
+    "I",
+    "N",
+    "D",
+    # "UP",
+    "YTT",
+    # "ANN",
+    "S",
+    "BLE",
+    # "FBT",
+    "B",
+    "A",
+    "COM",
+    "C4",
+    "DTZ",
+    "T10",
+    "EM",
+    "EXE",
+    "ISC",
+    "ICN",
+    "G",
+    "INP",
+    "PIE",
+    "T20",
+    "PT",
+    "Q",
+    "RET",
+    "SIM",
+    "TID",
+    "TCH",
+    "ARG",
+    "PTH",
+    "ERA",
+    "PD",
+    # "PGH",
+    "PL",
+    "TRY",
+    "RSE",
+    "RUF",
+]
+ignore = [
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    "D203",
+    "D213",
+    "S101",
+]
+exclude = []
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]

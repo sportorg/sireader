@@ -1,36 +1,64 @@
-PYTHONPATH = PYTHONPATH=./
-TEST = $(PYTHONPATH) pytest --verbosity=2 --showlocals --log-level=DEBUG --strict $(arg) -k "$(k)"
-PYLINT_CODE = sportident.py test_sportident.py
-CODE = $(PYLINT_CODE)
+.DEFAULT_GOAL := help
+CODE = sportident.py test_sportident.py
+POETRY_RUN = poetry run
+TEST = $(POETRY_RUN) pytest $(args)
 
-.PHONY: test test-fast test-failed test-cov teamcity lint format check
+.PHONY: help
+help: ## Show help
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-test:
-	$(TEST) --cov
+.PHONY: all
+all: format lint test  ## Run formakt lint test
 
-test-fast:
+.PHONY: install-poetry
+install-poetry:  ## Install poetry
+	pip install poetry
+
+.PHONY: install
+install:  ## Install dependencies
+	poetry install
+
+.PHONY: install-docs
+install-docs:  ## Install docs dependencies
+	poetry install --only docs
+
+.PHONY: publish
+publish:  ## Publish package
+	@poetry publish --build --no-interaction --username=$(pypi_username) --password=$(pypi_password)
+
+.PHONY: test
+test:  ## Test with coverage
+	$(TEST) --cov=./
+
+.PHONY: test-fast
+test-fast:  ## Test until error
 	$(TEST) --exitfirst
 
-test-failed:
+.PHONY: test-failed
+test-failed:  ## Test failed
 	$(TEST) --last-failed
 
-test-cov:
+.PHONY: test-report
+test-report:  ## Report testing
 	$(TEST) --cov --cov-report html
+	$(POETRY_RUN) python -m webbrowser 'htmlcov/index.html'
 
-teamcity: export TEAMCITY_VERSION=1
-teamcity: lint test
+.PHONY: lint
+lint:  ## Check code
+	$(POETRY_RUN) black --check $(CODE)
+	$(POETRY_RUN) pytest --dead-fixtures --dup-fixtures
+	# $(POETRY_RUN) mypy $(CODE)
 
-lint:
-	flake8 --jobs 4 --statistics --show-source $(CODE)
-	#pylint --jobs 4 --rcfile=setup.cfg $(PYLINT_CODE)
-	black --target-version py37 --skip-string-normalization --check $(CODE)
-	pytest --dead-fixtures --dup-fixtures
-	safety check --bare --full-report
+.PHONY: format
+format:  ## Formatting code
+	$(POETRY_RUN) black $(CODE)
 
-format:
-	autoflake --recursive --in-place --remove-all-unused-imports $(CODE)
-	isort --apply --recursive $(CODE)
-	black --target-version py37 --skip-string-normalization $(CODE)
-	unify --in-place --recursive $(CODE)
+.PHONY: bump
+bump:  ## Bump version (commit and tag)
+	$(POETRY_RUN) cz bump
 
-check: format lint test
+.PHONY: clean
+clean:  ## Clean
+	rm -rf site || true
+	rm -rf dist || true
+	rm -rf htmlcov || true
