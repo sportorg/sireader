@@ -426,7 +426,7 @@ class SIReader(object):
             "RC": 22,
             "P1": 128,  # would be 512 if all blocks were read, but blocks 1-3 are skipped on readout
             "PL": 4,
-            "PM": 64,
+            "PM": 128,
             "PTD": 0,  # Day of week byte, SI6 and newer
             "CN": 1,
             "PTH": 2,
